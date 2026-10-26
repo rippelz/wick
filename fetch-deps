@@ -41,7 +41,7 @@ if [[ ! -f $APK || $(sha256sum "$APK" | cut -d' ' -f1) != "$APK_SHA256" || $FORC
 	z=$CACHE/roblox-apk-$APK_VERSION.zip
 	if ! { [[ -f $z ]] && echo "$APK_ZIP_SHA256  $z" | sha256sum -c --status; }; then
 		say "downloading the Roblox APK $APK_VERSION"
-		curl -fL --retry 3 -o "$z.part" "$APK_ZIP_URL"
+		curl -fL --progress-bar --retry 3 -o "$z.part" "$APK_ZIP_URL"
 		echo "$APK_ZIP_SHA256  $z.part" | sha256sum -c --quiet || { rm -f "$z.part"; say "APK zip: hash mismatch"; exit 1; }
 		mv "$z.part" "$z"
 	fi
@@ -53,7 +53,7 @@ fi
 # Luau source for wick_place's compiler
 if [[ ! -f $WD/luau-$LUAU_VERSION/CMakeLists.txt ]]; then
 	say "Luau $LUAU_VERSION"
-	git clone -q --depth 1 --branch "$LUAU_VERSION" https://github.com/luau-lang/luau.git "$WD/luau-$LUAU_VERSION"
+	git -c advice.detachedHead=false clone -q --depth 1 --branch "$LUAU_VERSION" https://github.com/luau-lang/luau.git "$WD/luau-$LUAU_VERSION"
 fi
 
 # The game server's prefix + appdata, mock data, the default place (only what's missing)
