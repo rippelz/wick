@@ -26,7 +26,7 @@ DATA = os.environ.get("WAXLEY_DATA", os.path.expanduser("~/.local/share/waxley")
 WD = os.path.join(DATA, "wick")
 STUDIO = os.path.join(WD, "studio")
 # Luau at the forked engine's release (741): its bytecode format is the one the engine reads (v9)
-LUAU = os.environ.get("WICK_LUAU_SRC", os.path.expanduser("~/code/ref/luau-0.741"))
+LUAU = os.environ.get("WICK_LUAU_SRC", os.path.join(WD, "luau-0.741"))  # fetch-deps clones it
 WICKC = os.path.join(WD, "wickc")
 VERSION = b"wick_place 2"  # bump when the rewrite changes, to drop cached places
 

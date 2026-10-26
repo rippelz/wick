@@ -1,45 +1,64 @@
 #!/usr/bin/env bash
-# Install the Sober fork + Roblox APK pinned in versions.env from this repo's "deps" GitHub
-# release (private: needs `gh auth login` with access to rippelz/wick-private), straight into wick's
-# fork (your own Sober, if any, is left alone). Run Waxley's fetch-deps first.
+# Set up everything wick needs, at the exact builds in versions.env. Run Waxley's fetch-deps first.
+#   - the Sober fork: Sober from Flathub pinned to SOBER_COMMIT, in wick's own flatpak installation
+#     (masked, remotes disabled). Your own Sober is left alone, but wick needs one installed
+#     system-wide (any version) to mount the fork over, so that gets installed if it's missing.
+#   - the Roblox APK + assets (APK_VERSION) from its mirror, hash-checked
+#   - the game server's prefix (a copy of Waxley's), Luau's source, the mock data in defaults/
 #   fetch-deps [--force]
 set -euo pipefail
 HERE=$(dirname "$(realpath "$0")")
 source "$HERE/versions.env"
-WD=${WAXLEY_DATA:-$HOME/.local/share/waxley}/wick
+DATA=${WAXLEY_DATA:-$HOME/.local/share/waxley}
+WD=$DATA/wick
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/wick-deps
 FORCE=${1:-}
+say() { echo "fetch-deps: $*" >&2; }
 fork() { FLATPAK_USER_DIR=$WD/flatpak flatpak --user "$@"; }
-mkdir -p "$CACHE"; cd "$CACHE"
+mkdir -p "$CACHE" "$WD"
+[[ -f $DATA/studio/RobloxStudioBeta.exe && -d $DATA/prefix ]] || { say "run Waxley's fetch-deps first"; exit 1; }
 
-gh release download deps -R rippelz/wick-private --clobber -p SHA256SUMS
-get() {
-	grep -F "  $1" SHA256SUMS | sha256sum -c --status 2>/dev/null && return
-	echo "fetch-deps: downloading $1" >&2
-	gh release download deps -R rippelz/wick-private --clobber -p "$1"
-	grep -F "  $1" SHA256SUMS | sha256sum -c --quiet
-}
+# A system-wide Sober (the fork runs in its place) and the fork's runtime
+flatpak info --system org.vinegarhq.Sober >/dev/null 2>&1 || flatpak install --system --noninteractive flathub org.vinegarhq.Sober
+flatpak info "$SOBER_RUNTIME" >/dev/null 2>&1 || flatpak install --system --noninteractive flathub "$SOBER_RUNTIME"
 
-# The fork's app, the way wick installs it: own installation, masked, remotes disabled.
-# Its GNOME runtime is looked up in your normal installations, so get that from Flathub.
+# The fork, pinned
 if [[ $(fork info -c org.vinegarhq.Sober 2>/dev/null) != "$SOBER_COMMIT" || $FORCE == --force ]]; then
-	get "sober-$SOBER_VERSION.flatpak"
-	rt=org.gnome.Platform/x86_64/51
-	flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-	flatpak info "$rt" >/dev/null 2>&1 || flatpak install --user --noninteractive flathub "$rt"
+	say "Sober $SOBER_VERSION into wick's fork"
 	fork mask --remove org.vinegarhq.Sober 2>/dev/null || true
-	fork uninstall --noninteractive org.vinegarhq.Sober >/dev/null 2>&1 || true
-	fork install --noninteractive --bundle "sober-$SOBER_VERSION.flatpak"
+	fork remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+	fork remote-modify --enable flathub
+	fork info org.vinegarhq.Sober >/dev/null 2>&1 || fork install --noninteractive --no-deps flathub org.vinegarhq.Sober
+	fork update --noninteractive --no-deps --commit="$SOBER_COMMIT" org.vinegarhq.Sober
 	fork mask org.vinegarhq.Sober
 	for r in $(fork remotes --columns=name); do fork remote-modify --disable "$r"; done
 fi
 
-# The APK + its unpacked assets, where wick's fork keeps them
+# The APK + its unpacked assets, where the fork keeps them
 PS=$WD/sober/data/sober
 APK=$PS/packages/x86_64/com.roblox.client/base.apk
 if [[ ! -f $APK || $(sha256sum "$APK" | cut -d' ' -f1) != "$APK_SHA256" || $FORCE == --force ]]; then
-	get "roblox-apk-$APK_VERSION.tar.zst"
+	z=$CACHE/roblox-apk-$APK_VERSION.zip
+	if ! { [[ -f $z ]] && echo "$APK_ZIP_SHA256  $z" | sha256sum -c --status; }; then
+		say "downloading the Roblox APK $APK_VERSION"
+		curl -fL --retry 3 -o "$z.part" "$APK_ZIP_URL"
+		echo "$APK_ZIP_SHA256  $z.part" | sha256sum -c --quiet || { rm -f "$z.part"; say "APK zip: hash mismatch"; exit 1; }
+		mv "$z.part" "$z"
+	fi
 	mkdir -p "$PS"; rm -rf "$PS/packages" "$PS/assets"
-	zstd -dc "roblox-apk-$APK_VERSION.tar.zst" | tar -C "$PS" -xf -
+	python3 -I -m zipfile -e "$z" "$PS"
+	[[ $(sha256sum "$APK" | cut -d' ' -f1) == "$APK_SHA256" ]] || { say "APK hash mismatch after unpacking"; exit 1; }
 fi
-echo "fetch-deps: Sober $SOBER_VERSION + APK $APK_VERSION ready (wick won't re-fork unless --update)" >&2
+
+# Luau source for wick_place's compiler
+if [[ ! -f $WD/luau-$LUAU_VERSION/CMakeLists.txt ]]; then
+	say "Luau $LUAU_VERSION"
+	git clone -q --depth 1 --branch "$LUAU_VERSION" https://github.com/luau-lang/luau.git "$WD/luau-$LUAU_VERSION"
+fi
+
+# The game server's prefix + appdata, mock data, the default place (only what's missing)
+[[ -d $WD/server-prefix ]] || { say "copying Waxley's prefix for the game server"; cp -a --reflink=auto "$DATA/prefix" "$WD/server-prefix"; }
+mkdir -p "$WD/server-appdata" "$WD/mock" "$WD/places"
+cp -n "$HERE"/defaults/mock/* "$WD/mock/"
+cp -n "$HERE"/defaults/places/* "$WD/places/"
+say "ready: Sober $SOBER_VERSION fork + APK $APK_VERSION (wick won't re-fork unless --update)"
