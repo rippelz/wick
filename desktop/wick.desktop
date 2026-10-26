@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Wick
+GenericName=Offline Roblox (Sober fork)
+Comment=Pick a place and play it fully offline in wick's Sober fork, with Waxley as the backend
+Exec=sh -c "exec $HOME/.local/bin/wick-launcher %f"
+Icon=wick
+Terminal=false
+Categories=Game;
+StartupWMClass=wick-launcher

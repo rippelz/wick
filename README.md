@@ -25,3 +25,10 @@ and its data dir. The Waxley checkout is found from `WAXLEY_HOME`, else the `wax
 
 ## Data
 `~/.local/share/waxley/wick/` (fork flatpak, places, certs, `run/`). Override the base with `WAXLEY_DATA`.
+
+## Install
+    ln -s "$PWD/wick" "$PWD/wick-play" ~/.local/bin/
+    cp icon/wick.svg ~/.local/share/icons/hicolor/scalable/apps/
+    cp desktop/wick.desktop ~/.local/share/applications/   # opens wick-launcher
+Needs Waxley (set up and run once), Sober installed from Flathub (the fork is copied from it),
+gcc (curlshim), lune (place conversion), python3 with `cryptography`, gamescope, sudo for poke.py.
