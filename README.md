@@ -34,6 +34,11 @@ Needs Waxley (set up and run once), Sober installed from Flathub (the fork is co
 gcc (curlshim), lune (place conversion), python3 with `cryptography`, gamescope, sudo for poke.py.
 
 ## Pinned versions
+
+**Easiest:** run Waxley's `fetch-deps`, then `./fetch-deps` here: it installs the pinned Sober
+straight into wick's fork and drops in the APK + assets from this repo's private
+[`deps` release](https://github.com/rippelz/wick/releases/tag/deps), so no Sober install of your
+own is needed. The binaries are Roblox's and Sober's: keep the repo private.
 `versions.env` lists the fork's builds; `wick` warns when the fork differs (`poke.py`'s offsets
 only match these).
 - Sober: `flatpak install flathub org.vinegarhq.Sober`, then

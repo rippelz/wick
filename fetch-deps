@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Install the Sober fork + Roblox APK pinned in versions.env from this repo's "deps" GitHub
+# release (private: needs `gh auth login` with access to rippelz/wick), straight into wick's
+# fork (your own Sober, if any, is left alone). Run Waxley's fetch-deps first.
+#   fetch-deps [--force]
+set -euo pipefail
+HERE=$(dirname "$(realpath "$0")")
+source "$HERE/versions.env"
+WD=${WAXLEY_DATA:-$HOME/.local/share/waxley}/wick
+CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/wick-deps
+FORCE=${1:-}
+fork() { FLATPAK_USER_DIR=$WD/flatpak flatpak --user "$@"; }
+mkdir -p "$CACHE"; cd "$CACHE"
+
+gh release download deps -R rippelz/wick --clobber -p SHA256SUMS
+get() {
+	grep -F "  $1" SHA256SUMS | sha256sum -c --status 2>/dev/null && return
+	echo "fetch-deps: downloading $1" >&2
+	gh release download deps -R rippelz/wick --clobber -p "$1"
+	grep -F "  $1" SHA256SUMS | sha256sum -c --quiet
+}
+
+# The fork's app, the way wick installs it: own installation, masked, remotes disabled.
+# Its GNOME runtime is looked up in your normal installations, so get that from Flathub.
+if [[ $(fork info -c org.vinegarhq.Sober 2>/dev/null) != "$SOBER_COMMIT" || $FORCE == --force ]]; then
+	get "sober-$SOBER_VERSION.flatpak"
+	rt=org.gnome.Platform/x86_64/51
+	flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+	flatpak info "$rt" >/dev/null 2>&1 || flatpak install --user --noninteractive flathub "$rt"
+	fork mask --remove org.vinegarhq.Sober 2>/dev/null || true
+	fork uninstall --noninteractive org.vinegarhq.Sober >/dev/null 2>&1 || true
+	fork install --noninteractive --bundle "sober-$SOBER_VERSION.flatpak"
+	fork mask org.vinegarhq.Sober
+	for r in $(fork remotes --columns=name); do fork remote-modify --disable "$r"; done
+fi
+
+# The APK + its unpacked assets, where wick's fork keeps them
+PS=$WD/sober/data/sober
+APK=$PS/packages/x86_64/com.roblox.client/base.apk
+if [[ ! -f $APK || $(sha256sum "$APK" | cut -d' ' -f1) != "$APK_SHA256" || $FORCE == --force ]]; then
+	get "roblox-apk-$APK_VERSION.tar.zst"
+	mkdir -p "$PS"; rm -rf "$PS/packages" "$PS/assets"
+	zstd -dc "roblox-apk-$APK_VERSION.tar.zst" | tar -C "$PS" -xf -
+fi
+echo "fetch-deps: Sober $SOBER_VERSION + APK $APK_VERSION ready (wick won't re-fork unless --update)" >&2
