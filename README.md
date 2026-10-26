@@ -1,6 +1,6 @@
 # Wick
 
-Sober (Roblox's Android client) running fully offline, with [Waxley](https://github.com/rippelz/waxley)
+Sober (Roblox's Android client) running fully offline, with [Waxley](https://github.com/rippelz/waxley-private)
 as its backend.
 
     wick [place.rbxl|.rbxlx] [--hidden] [--url roblox://...] [--update]
@@ -37,7 +37,7 @@ gcc (curlshim), lune (place conversion), python3 with `cryptography`, gamescope,
 
 **Easiest:** run Waxley's `fetch-deps`, then `./fetch-deps` here: it installs the pinned Sober
 straight into wick's fork and drops in the APK + assets from this repo's private
-[`deps` release](https://github.com/rippelz/wick/releases/tag/deps), so no Sober install of your
+[`deps` release](https://github.com/rippelz/wick-private/releases/tag/deps), so no Sober install of your
 own is needed. The binaries are Roblox's and Sober's: keep the repo private.
 `versions.env` lists the fork's builds; `wick` warns when the fork differs (`poke.py`'s offsets
 only match these).

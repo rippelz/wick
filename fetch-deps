@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the Sober fork + Roblox APK pinned in versions.env from this repo's "deps" GitHub
-# release (private: needs `gh auth login` with access to rippelz/wick), straight into wick's
+# release (private: needs `gh auth login` with access to rippelz/wick-private), straight into wick's
 # fork (your own Sober, if any, is left alone). Run Waxley's fetch-deps first.
 #   fetch-deps [--force]
 set -euo pipefail
@@ -12,11 +12,11 @@ FORCE=${1:-}
 fork() { FLATPAK_USER_DIR=$WD/flatpak flatpak --user "$@"; }
 mkdir -p "$CACHE"; cd "$CACHE"
 
-gh release download deps -R rippelz/wick --clobber -p SHA256SUMS
+gh release download deps -R rippelz/wick-private --clobber -p SHA256SUMS
 get() {
 	grep -F "  $1" SHA256SUMS | sha256sum -c --status 2>/dev/null && return
 	echo "fetch-deps: downloading $1" >&2
-	gh release download deps -R rippelz/wick --clobber -p "$1"
+	gh release download deps -R rippelz/wick-private --clobber -p "$1"
 	grep -F "  $1" SHA256SUMS | sha256sum -c --quiet
 }
 
