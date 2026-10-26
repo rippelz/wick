@@ -32,3 +32,13 @@ and its data dir. The Waxley checkout is found from `WAXLEY_HOME`, else the `wax
     cp desktop/wick.desktop ~/.local/share/applications/   # opens wick-launcher
 Needs Waxley (set up and run once), Sober installed from Flathub (the fork is copied from it),
 gcc (curlshim), lune (place conversion), python3 with `cryptography`, gamescope, sudo for poke.py.
+
+## Pinned versions
+`versions.env` lists the fork's builds; `wick` warns when the fork differs (`poke.py`'s offsets
+only match these).
+- Sober: `flatpak install flathub org.vinegarhq.Sober`, then
+  `flatpak update --commit=<SOBER_COMMIT> org.vinegarhq.Sober` before the first `wick` run (the
+  fork is copied from it). Flathub keeps old commits.
+- Roblox APK (`APK_VERSION`): Sober downloads the current one, so this only matches while Roblox
+  still ships it. Otherwise it has to come from an APK archive; check it against `APK_SHA256`
+  (`base.apk` in Sober's `data/sober/packages/x86_64/com.roblox.client/`).

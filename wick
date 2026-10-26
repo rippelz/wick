@@ -113,6 +113,15 @@ host)
 		for r in $(fork remotes --columns=name); do fork remote-modify --disable "$r"; done
 		rm -f "$bundle"
 	fi
+	# Warn if the fork isn't the build in versions.env (poke.py's offsets depend on it)
+	source "$HERE/versions.env"
+	c=$(fork info -c org.vinegarhq.Sober 2>/dev/null || true)
+	[[ $c == "$SOBER_COMMIT" ]] || echo "wick: warning: Sober fork is ${c:-missing}, want $SOBER_VERSION ($SOBER_COMMIT)" >&2
+	key="$APK/base.apk $(stat -c '%s %Y' "$APK/base.apk")"
+	if ! grep -qxF "$key $APK_SHA256" "$WD/apk-ok" 2>/dev/null; then
+		if [[ $(sha256sum "$APK/base.apk" | cut -d' ' -f1) == "$APK_SHA256" ]]; then echo "$key $APK_SHA256" >"$WD/apk-ok"
+		else echo "wick: warning: Roblox APK isn't $APK_VERSION (poke.py offsets won't match)" >&2; fi
+	fi
 	# The engine's own (static) curl only sets CURLOPT_CAINFO if <data>/exe/ssl/cacert.pem (or
 	# exe/cacert.pem) exists; Sober leaves exe/ empty, so put the APK's list + wick's CA there
 	mkdir -p "$PS/exe/ssl"
